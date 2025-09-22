@@ -1,0 +1,8 @@
+func add(int a, int b) {
+    return a + b;
+}
+func dbl(int n) {
+return add(n, n);
+}
+int result;
+result := dbl(5);

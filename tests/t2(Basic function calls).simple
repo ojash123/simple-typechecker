@@ -1,0 +1,13 @@
+func f(int x, boolean y){
+int z;
+if(y)
+    z := x + 10;
+else 
+    z := x - 5;
+return z;
+}
+int x;
+int y;
+x := 10;
+y := f(x, true);
+x := f(y, false);

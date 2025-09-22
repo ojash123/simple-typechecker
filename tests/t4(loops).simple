@@ -1,0 +1,11 @@
+func sum(int n){
+    int result;
+    int i;
+    while(i < n){
+        i := i + 1;
+        result := result + i;
+    }
+    return result;
+}
+int x;
+x := sum(10);
