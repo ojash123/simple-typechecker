@@ -18,7 +18,7 @@ parser code {:
 // --- TERMINALS (Tokens from the lexer) ---
 terminal LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE, COMMA, SEMICOLON;
 terminal ASSIGN, EQ, LT, GT, PLUS, MINUS, STAR, SLASH;
-terminal INT, BOOLEAN, IF, ELSE, WHILE, RETURN, TRUE, FALSE, FUNC; // Added FUNC
+terminal INT, BOOLEAN, IF, ELSE, WHILE, RETURN, TRUE, FALSE, FUNC, VAR; // Added VAR
 
 // Terminals with values
 terminal String IDENTIFIER;
@@ -97,7 +97,8 @@ declaration ::= type:t IDENTIFIER:id
     {: RESULT = new VarDecl(id, t); :};
 
 type ::= INT {: RESULT = Type.INTEGER; :}
-    | BOOLEAN {: RESULT = Type.BOOLEAN; :};
+    | BOOLEAN {: RESULT = Type.BOOLEAN; :}
+    | VAR {: RESULT = null; :};
 
 stmts ::= stmts:list stmt:s
     {: list.add(s); RESULT = list; :}

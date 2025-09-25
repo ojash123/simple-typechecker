@@ -54,6 +54,7 @@ Identifier = [a-zA-Z][a-zA-Z0-9_]*
     "else"            { return new Symbol(sym.ELSE, yyline, yycolumn); }
     "while"           { return new Symbol(sym.WHILE, yyline, yycolumn); }
     "return"          { return new Symbol(sym.RETURN, yyline, yycolumn); }
+    "var"             { return new Symbol(sym.VAR, yyline, yycolumn); } // ADDED
     "int"             { return new Symbol(sym.INT, yyline, yycolumn); }
     "boolean"         { return new Symbol(sym.BOOLEAN, yyline, yycolumn); }
     "true"            { return new Symbol(sym.TRUE, yyline, yycolumn); }
