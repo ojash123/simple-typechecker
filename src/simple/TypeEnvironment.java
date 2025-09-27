@@ -21,7 +21,7 @@ public class TypeEnvironment {
     public void exitScope(){
         scopeStack.pop();
     }
-    public TypeExpr getVal(String key){
+    public TypeExpr lookup(String key){
         for (Map<String,TypeExpr> sigmaMap : scopeStack) {
             if(sigmaMap.containsKey(key)){
                 return sigmaMap.get(key);

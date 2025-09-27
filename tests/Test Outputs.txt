@@ -1,0 +1,49 @@
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" s
+imple.TestTypeChecker tests/t1\(Functions\ that\ call\ functions\).simple 
+--- Running Test Case: tests/t1(Functions that call functions).simple ---
+{
+  add = (INTEGER, INTEGER) -> INTEGER
+  result = INTEGER
+  dbl = (INTEGER) -> INTEGER
+}
+Result: PASS - Program is well-typed.
+---------------------------------------
+
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" simple.TestTypeChecker tests/t2\(Basic\ function\ calls\).simple 
+--- Running Test Case: tests/t2(Basic function calls).simple ---
+{
+  f = (INTEGER, BOOLEAN) -> INTEGER
+  x = INTEGER
+  y = INTEGER
+}
+Result: PASS - Program is well-typed.
+---------------------------------------
+
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" simple.TestTypeChecker tests/t3\(Scoping\).simple 
+--- Running Test Case: tests/t3(Scoping).simple ---
+{
+  x = INTEGER
+}
+Result: PASS - Program is well-typed.
+---------------------------------------
+
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" simple.TestTypeChecker tests/t4\(loops\).simple 
+--- Running Test Case: tests/t4(loops).simple ---
+{
+  x = INTEGER
+  sum = (INTEGER) -> INTEGER
+}
+Result: PASS - Program is well-typed.
+---------------------------------------
+
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" simple.TestTypeChecker tests/t5.simple 
+--- Running Test Case: tests/t5.simple ---
+Result: FAIL - Type checker threw an exception.
+Error Message: Type Mismatch: BOOLEAN INTEGER
+---------------------------------------
+
+ojas@ojas-Lenovo-V14-IIL:~/Documents/PA4SE/simple-typechecker$ java -cp "bin:lib/java-cup-11b.jar" simple.TestTypeChecker tests/t6.simple 
+--- Running Test Case: tests/t6.simple ---
+Result: FAIL - Type checker threw an exception.
+Error Message: Function arity mismatch: add
+---------------------------------------

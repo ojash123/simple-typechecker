@@ -1,0 +1,3 @@
+boolean x;
+int y;
+x := y + 5;
