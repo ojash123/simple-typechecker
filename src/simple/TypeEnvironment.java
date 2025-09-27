@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TypeEnvironment {
@@ -63,7 +64,9 @@ public class TypeEnvironment {
         return sb.toString();
     }
 }
-abstract class TypeExpr{}
+abstract class TypeExpr{
+    public TypeExpr find(){return this;}
+}
 class TypeConst extends TypeExpr{
     final Type type;
     
@@ -75,6 +78,17 @@ class TypeConst extends TypeExpr{
     public String toString() {
         return type.toString();
     }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TypeConst typeConst = (TypeConst) o;
+        return type.equals(typeConst.type);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(type); }
+    
 }
 class TypeVar extends TypeExpr{
     private static int nextId = 0;
@@ -82,6 +96,15 @@ class TypeVar extends TypeExpr{
     TypeExpr instance = null;
     public TypeVar(){
         this.id = nextId++;
+    }
+    @Override
+    public TypeExpr find() {
+        if (instance != null) {
+            TypeExpr root = instance.find();
+            instance = root;
+            return root;
+        }
+        return this; // This TypeVar is its own leader for now.
     }
     @Override
     public String toString() {
