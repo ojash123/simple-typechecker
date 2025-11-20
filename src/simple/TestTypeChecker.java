@@ -6,7 +6,7 @@ public class TestTypeChecker {
 
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.err.println("Usage: java simple.TestTypeChecker <path_to_test_file>");
+            System.err.println("Usage: java -cp \"bin:lib/java-cup-11b.jar\" <path_to_test_file>");
             System.exit(1);
         }
         String filePath = args[0];
