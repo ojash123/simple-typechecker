@@ -1,20 +1,25 @@
 package simple;
 
 import java.util.List;
-//import java.util.stream.Collectors;
+import java.util.stream.Collectors;
 
-// --- Helper for indentation ---
+// --- Helper for indentation (Kept here as it relates to AST visualization/debug) ---
 class Indent {
     public static String get(int level) {
         return "  ".repeat(level);
     }
 }
 
+// --- Base AST Node Interfaces ---
+
 interface AstNode {
     String toString(int indent);
 
     @Override
     String toString();
+    
+    // Responsibility 1: Cloning (managing immutability)
+    AstNode deepCopy();
 }
 
 abstract class Stmt implements AstNode {
@@ -39,6 +44,8 @@ enum Operator {
     ADD, SUB, MUL, DIV, EQ, LT, GT, AND, OR
 }
 
+// --- AST Node Implementations (with deepCopy only) ---
+
 class ProgramNode implements AstNode {
     final List<FuncDef> fns;
     final List<VarDecl> globals;
@@ -54,17 +61,17 @@ class ProgramNode implements AstNode {
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(Indent.get(indent)).append("ProgramNode:\n");
-        sb.append("Definitions: \n");
+        sb.append(Indent.get(indent)).append("Definitions: \n");
         for (FuncDef fn : fns) {
-            sb.append(fn.toString(indent));
+            sb.append(fn.toString(indent + 1));
         }
-        sb.append("Globals: \n");
+        sb.append(Indent.get(indent)).append("Globals: \n");
         for (VarDecl global : globals) {
-            sb.append(global.toString(indent));
+            sb.append(global.toString(indent + 1)).append("\n");
         }
-        sb.append("Main: \n");
+        sb.append(Indent.get(indent)).append("Main: \n");
         for (Stmt stmt : main) {
-            sb.append(stmt.toString(indent));
+            sb.append(stmt.toString(indent + 1));
         }
         return sb.toString();
     }
@@ -72,6 +79,15 @@ class ProgramNode implements AstNode {
     @Override
     public final String toString() {
         return toString(0);
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        List<FuncDef> fnsCopy = fns.stream().map(f -> (FuncDef)f.deepCopy()).collect(Collectors.toList());
+        List<VarDecl> globalsCopy = globals.stream().map(g -> (VarDecl)g.deepCopy()).collect(Collectors.toList());
+        List<Stmt> mainCopy = main.stream().map(s -> (Stmt)s.deepCopy()).collect(Collectors.toList());
+        return new ProgramNode(fnsCopy, globalsCopy, mainCopy);
     }
 }
 
@@ -87,6 +103,12 @@ class VarDecl extends Stmt {
     @Override
     public String toString(int indent) {
         return String.format("%sVarDecl: %s %s ", Indent.get(indent), type, name);
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new VarDecl(this.name, this.type);
     }
 }
 
@@ -105,11 +127,11 @@ class FuncDef implements AstNode {
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(Indent.get(indent)).append("Func: ").append(name).append(" ");
-        sb.append(Indent.get(indent)).append("Params: ");
+        sb.append("Params: ");
         for (VarDecl param : params) {
-            sb.append(param.toString(indent));
+            sb.append(param.toString(0)); // Params are printed inline
         }
-        sb.append(Indent.get(indent)).append("\nBody:\n");
+        sb.append("\n" + Indent.get(indent)).append("Body:\n");
         sb.append(body.toString(indent + 1));
         return sb.toString();
     }
@@ -117,6 +139,14 @@ class FuncDef implements AstNode {
     @Override
     public final String toString() {
         return toString(0);
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        List<VarDecl> paramsCopy = params.stream().map(p -> (VarDecl)p.deepCopy()).collect(Collectors.toList());
+        Stmt bodyCopy = (Stmt) body.deepCopy();
+        return new FuncDef(this.name, paramsCopy, bodyCopy);
     }
 }
 
@@ -134,13 +164,21 @@ class BlockStmt extends Stmt {
         StringBuilder sb = new StringBuilder();
         sb.append(Indent.get(indent)).append("BlockStmt:\n");
         for (VarDecl decl : declarations) {
-            sb.append(decl.toString(indent + 1));
+            sb.append(decl.toString(indent + 1)).append("\n");
         }
         sb.append(Indent.get(indent)).append("Statements\n");
         for (Stmt stmt : statements) {
             sb.append(stmt.toString(indent + 1));
         }
         return sb.toString();
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        List<VarDecl> declsCopy = declarations.stream().map(d -> (VarDecl)d.deepCopy()).collect(Collectors.toList());
+        List<Stmt> stmtsCopy = statements.stream().map(s -> (Stmt)s.deepCopy()).collect(Collectors.toList());
+        return new BlockStmt(declsCopy, stmtsCopy);
     }
 }
 
@@ -157,8 +195,14 @@ class AssignStmt extends Stmt {
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(Indent.get(indent)).append(id).append(" := ");
-        sb.append(expr.toString(indent)).append("\n");
+        sb.append(expr.toString(0)).append("\n");
         return sb.toString();
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new AssignStmt(this.id, (Expr) this.expr.deepCopy());
     }
 }
 
@@ -177,15 +221,23 @@ class IfStmt extends Stmt {
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
         sb.append(Indent.get(indent)).append("If (");
-        sb.append(conditional.toString(indent)).append(")");
+        sb.append(conditional.toString(0)).append(")");
         sb.append("\n" + Indent.get(indent)).append("Then:\n");
         sb.append(t.toString(indent + 1));
         if (e != null) {
-            sb.append("\n" + Indent.get(indent)).append("Else:\n");
+            sb.append(Indent.get(indent)).append("Else:\n");
             sb.append(e.toString(indent + 1));
         }
-        sb.append("\n");
         return sb.toString();
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        Expr condCopy = (Expr) conditional.deepCopy();
+        Stmt tCopy = (Stmt) t.deepCopy();
+        Stmt eCopy = (e != null) ? (Stmt) e.deepCopy() : null;
+        return new IfStmt(condCopy, tCopy, eCopy);
     }
 }
 
@@ -208,6 +260,14 @@ class LoopStmt extends Stmt {
         sb.append(body.toString(indent + 1)).append("\n");
         return sb.toString();
     }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        Expr condCopy = (Expr) conditional.deepCopy();
+        Stmt bodyCopy = (Stmt) body.deepCopy();
+        return new LoopStmt(condCopy, bodyCopy);
+    }
 }
 
 class ReturnStmt extends Stmt {
@@ -224,6 +284,12 @@ class ReturnStmt extends Stmt {
         sb.append(expr.toString(0)).append("\n");
         return sb.toString();
     }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new ReturnStmt((Expr) this.expr.deepCopy());
+    }
 }
 
 class BinaryExpr extends Expr {
@@ -237,10 +303,19 @@ class BinaryExpr extends Expr {
         this.right = right;
     }
     
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        Expr leftCopy = (Expr) left.deepCopy(); 
+        Expr rightCopy = (Expr) right.deepCopy();
+        // Returns a clone of the current node
+        return new BinaryExpr(leftCopy, op, rightCopy); 
+    }
+
     @Override
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
-        sb.append(left.toString(indent));
+        sb.append(left.toString(0));
         sb.append(" ").append(op).append(" ");
         sb.append(right.toString(0));
         return sb.toString();
@@ -258,6 +333,12 @@ class IdExpr extends Expr {
     public String toString(int indent) {
         return String.format("Id: %s ", name);
     }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new IdExpr(this.name);
+    }
 }
 
 class IntLiteral extends Expr {
@@ -271,6 +352,12 @@ class IntLiteral extends Expr {
     public String toString(int indent) {
         return String.format("IntLiteral: %d ", value);
     }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new IntLiteral(this.value);
+    }
 }
 
 class BoolLiteral extends Expr {
@@ -283,6 +370,12 @@ class BoolLiteral extends Expr {
     @Override
     public String toString(int indent) {
         return String.format("BoolLiteral: %b ", value);
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        return new BoolLiteral(this.value);
     }
 }
 
@@ -298,12 +391,19 @@ class FuncCall extends Expr {
     @Override
     public String toString(int indent) {
         StringBuilder sb = new StringBuilder();
-        sb.append(Indent.get(indent)).append("FuncCall: ").append(name).append(" ");
+        sb.append("FuncCall: ").append(name).append(" ");
         sb.append("Args: (");
         for (Expr arg : args) {
             sb.append(arg.toString(0));
         }
         sb.append(")");
         return sb.toString();
+    }
+    
+    // --- Deep Copy Implementation ---
+    @Override
+    public AstNode deepCopy() {
+        List<Expr> argsCopy = args.stream().map(a -> (Expr)a.deepCopy()).collect(Collectors.toList());
+        return new FuncCall(this.name, argsCopy);
     }
 }
