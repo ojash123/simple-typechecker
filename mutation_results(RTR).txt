@@ -1,0 +1,62 @@
+--- MUTATION TESTING REPORT ---
+Input File: tests/t2(Basic function calls).simple
+Mutator Used: RTR (Return Type Replacement)
+
+--- Original AST ---
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+
+--------------------
+
+Original Program: PASS (Well-typed). Proceeding with mutation.
+
+Total Mutants Generated: 2
+
+Mutant 1: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 2: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: INTEGER BOOLEAN
+  Mutant AST:
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: BoolLiteral: true 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+
+
+--- FINAL SUMMARY ---
+Killed Mutants: 1
+Mutation Score: 50.00%

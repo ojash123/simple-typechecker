@@ -33,7 +33,7 @@ public class MutationTesting {
             
             writer.println("--- MUTATION TESTING REPORT ---");
             writer.println("Input File: " + filePath);
-            writer.println("Mutator Used: AOR (Arithmetic Operator Replacement)\n");
+            writer.println("Mutator Used: RTR (Return Type Replacement)\n");
 
             // 1. Parse the original program
             originalAst = parseProgram(filePath);
@@ -55,9 +55,9 @@ public class MutationTesting {
             
             writer.println("Original Program: PASS (Well-typed). Proceeding with mutation.\n");
 
-            // 3. Generate mutants using the AOR operator
-            AORMutator aorMutator = new AORMutator();
-            MutationTraverser traverser = new MutationTraverser(aorMutator);
+            // 3. Generate mutants using the operator
+            Mutator mutator = new RTRMutator();
+            MutationTraverser traverser = new MutationTraverser(mutator);
             
             MutationResult result = traverser.generateMutants(originalAst);
             
@@ -66,6 +66,7 @@ public class MutationTesting {
             int killedCount = 0;
             
             // 4. Test each mutant
+            boolean printFlag = true;
             for (int i = 0; i < result.mutants.size(); i++) {
                 ProgramNode mutant = result.mutants.get(i);
                 
@@ -81,9 +82,13 @@ public class MutationTesting {
                     killedCount++;
                     // Print the error message when the mutant is killed
                     writer.printf("  Reason: Type Checker threw error -> %s\n", mutantResult.errorMessage);
-                    // To include the AST of the killed mutant:
-                    // writer.println("  Mutant AST:");
-                    // writer.println(mutant.toString());
+                    // To include the AST of one killed mutant:
+                    if(printFlag){
+                        writer.println("  Mutant AST:");
+                        writer.println(mutant.toString());
+                        printFlag = !printFlag;
+                    }
+                    
                 } else {
                     writer.printf("  Reason: Passed type check (Survived).\n");
                 }

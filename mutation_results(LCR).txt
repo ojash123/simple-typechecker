@@ -1,0 +1,84 @@
+--- MUTATION TESTING REPORT ---
+Input File: tests/t2(Basic function calls).simple
+Mutator Used: LCR (Literal Constant Replacement)
+
+--- Original AST ---
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+
+--------------------
+
+Original Program: PASS (Well-typed). Proceeding with mutation.
+
+Total Mutants Generated: 13
+
+Mutant 1: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 2: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: BOOLEAN INTEGER
+  Mutant AST:
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD BoolLiteral: true 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+
+Mutant 3: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: BOOLEAN INTEGER
+Mutant 4: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 5: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: BOOLEAN INTEGER
+Mutant 6: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: BOOLEAN INTEGER
+Mutant 7: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 8: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: INTEGER BOOLEAN
+Mutant 9: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: INTEGER BOOLEAN
+Mutant 10: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 11: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: INTEGER BOOLEAN
+Mutant 12: SURVIVED
+  Reason: Passed type check (Survived).
+Mutant 13: KILLED
+  Reason: Type Checker threw error -> Type Mismatch: INTEGER BOOLEAN
+
+--- FINAL SUMMARY ---
+Killed Mutants: 8
+Mutation Score: 61.54%
