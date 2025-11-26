@@ -1,0 +1,284 @@
+\documentclass[titlepage]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{color}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\title{Mutation Testing for SIMPLE Typechecker}
+\author{Ojas Hegde, Priyansh Agrahari}
+\date{November 2025}
+
+\definecolor{high}{rgb}{0.67,1,0.43}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2
+}
+
+\hypersetup{
+    colorlinks=true,
+    linktoc=section,
+    linkcolor=black,
+    citecolor=green,
+    urlcolor=cyan,
+}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+This project implements a Mutation Testing Framework designed to validate the robustness of a Type Checker for a custom programming language named "SIMPLE". Unlike traditional unit testing, which tests the program's output, this system tests the test suite (in this case, the Type Checker logic) by deliberately generating faulty program ASTs ("mutants"). \\
+The system parses a source file, generates semantically or syntactically altered versions of the Abstract Syntax Tree (AST), and verifies whether the Type Checker correctly accepts valid mutants and rejects invalid ones.
+
+\section{Architecture}
+
+The workflow follows a standard "Generate and Test" pipeline managed by the \texttt{MutationTesting} class.
+
+\begin{enumerate}
+    \item {
+    Parsing \& Sanity Check:
+        \begin{enumerate}
+            \item The system uses JFlex (Lexer) and CUP (Parser) to convert the source \texttt{.simple} file into a \texttt{ProgramNode} (AST).
+            \item The \texttt{TypeChecker} is run on the original AST. If the original program is already ill-typed, the process halts to prevent testing an already broken program.
+        \end{enumerate} 
+    }
+    \item {
+    Mutant Generation:
+        \begin{enumerate}
+            \item The \texttt{MutationTraverser} iterates through the AST.
+            \item It delegates logic to specific \texttt{Mutator} implementations (AOR, LCR, RTR).
+            \item Before applying a mutation, the system uses \texttt{AstNode.deepCopy()} to clone the specific node or sub-tree. This ensures that mutations are isolated and do not corrupt the original AST or subsequent mutants.
+        \end{enumerate}
+    }
+    \item {
+    Execution \& Analysis:
+        \begin{enumerate}
+            \item A fresh instance of \texttt{TypeChecker} is instantiated for every single mutant to ensure a clean Symbol Table.
+            \item \textbf{Killed Mutant:} The \texttt{TypeChecker} throws an exception. This is the desired outcome for mutants that introduce type errors.
+            \item \textbf{Survived Mutant:} The \texttt{TypeChecker} accepts the program. This occurs if the mutant is syntactically valid (e.g., changing \texttt{x + 5} to \texttt{x + 0}).
+        \end{enumerate}
+    }
+\end{enumerate}
+
+\section{Mutation Operators}
+
+The project is architected around a modular \texttt{Mutator} interface, designed to decouple the specific mutation logic from the AST traversal engine. This extensible design allows for the integration of different mutation strategies without modifying the core testing framework.
+
+The \texttt{MutationTraverser} class is responsible for orchestrating the mutation process and enforcing \textbf{mutation production coverage}. As it recursively walks the Abstract Syntax Tree (AST), it identifies every node that matches a specific operator's target criteria (e.g., every instance of \texttt{BinaryExpr} for AOR). For each identified location, the system generates a comprehensive list of all possible mutants defined by that operator. This exhaustive approach ensures that the Type Checker is stress-tested against every applicable occurrence of a fault pattern.
+
+We'll use the below AST to demonstrate the different mutations:
+
+\begin{lstlisting}[caption={Original AST}, label={lst:orig_ast}]
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+\end{lstlisting}
+
+\newpage
+
+\subsection{AOR (Arithmetic Operator Replacement)}
+
+\textbf{Target:} BinaryExpr nodes. \\ \\
+\textbf{Logic:} Replaces Arithmetic Operators (ADD, SUB, MUL, DIV) with Boolean Operators (AND, OR). \\ \\
+\textbf{Objective:} To ensure the Type Checker catches type errors where a Boolean is used in place of an Integer (or vice versa).
+
+\begin{lstlisting}[escapechar=!, caption={AOR Mutated AST (Killed)}, label={lst:aor_mut_ast}]
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  !\colorbox{high}{AND}! IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+\end{lstlisting}
+
+\newpage
+
+\subsection{LCR (Literal Constant Replacement)}
+
+\textbf{Target:} IntLiteral and BoolLiteral nodes. \\ \\
+\textbf{Logic:}
+\begin{itemize}[nosep]
+    \item Value Replacement: Changes values (e.g., 5 $\to$ 0, true $\to$ false). These usually Survive because they are valid types.
+    \item Type Replacement: Swaps types (e.g., 5 $\to$ true). These are expected to be Killed. \\
+\end{itemize}
+\textbf{Objective:} To test if the Type Checker is validating the types of literals, distinguishing between valid semantic changes and invalid type changes.
+
+\begin{lstlisting}[escapechar=!, caption={LCR Mutated AST (Killed)}, label={lst:lcr_mut_ast}]
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD !\colorbox{high}{BoolLiteral: true}! 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: Id: z 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+\end{lstlisting}
+
+\newpage
+
+\subsection{RTR (Return Type Replacement)}
+
+\textbf{Target:} ReturnStmt nodes. \\ \\
+\textbf{Logic:} Replaces the return expression with a fixed constant.
+\begin{itemize}[nosep]
+    \item Mutant 1: return 0; (Integer)
+    \item Mutant 2: return true; (Boolean) \\
+\end{itemize}
+\textbf{Objective:} To verify that the Type Checker enforces function return signatures.
+
+\begin{lstlisting}[escapechar=!, caption={RTR Mutated AST (Killed)}, label={lst:rtr_mut_ast}]
+ProgramNode:
+Definitions: 
+  Func: f Params: VarDecl: INTEGER x VarDecl: BOOLEAN y 
+  Body:
+    BlockStmt:
+      VarDecl: INTEGER z 
+    Statements
+      If (Id: y )
+      Then:
+        z := Id: x  ADD IntLiteral: 10 
+      Else:
+        z := Id: x  SUB IntLiteral: 5 
+      ReturnStmt: !\colorbox{high}{BoolLiteral: true}! 
+Globals: 
+  VarDecl: INTEGER x 
+  VarDecl: INTEGER y 
+Main: 
+  x := IntLiteral: 10 
+  y := FuncCall: f Args: (Id: x BoolLiteral: true )
+  x := FuncCall: f Args: (Id: y BoolLiteral: false )
+\end{lstlisting}
+
+\newpage
+
+\section{Results}
+
+The mutation testing system evaluated the robustness of the Type Checker using three distinct mutation operators: AOR (Arithmetic Operator Replacement), LCR (Literal Constant Replacement), and RTR (Return Type Replacement). \\ \\
+The objective was to verify that the Type Checker:
+\begin{itemize}[noitemsep]
+    \item Rejects (Kills) mutants that violate type rules.
+    \item Accepts (Allows to Survive) mutants that remain well-typed.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Summary of Performance}
+\label{tab:perf_summary}
+
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+Mutation Operator & Total Mutants & Killed & Survived & Mutation Score \\ \hline
+AOR               & 4             & 4      & 0        & 100\%          \\
+LCR               & 13            & 8      & 5        & 61.54\%        \\
+RTR               & 2             & 1      & 1        & 50\%           \\ \hline
+Total             & 19            & 13     & 6        & 68.42\%        \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Arithmetic Operator Replacement}
+
+\textbf{Result:} 100\% Score (4/4 Killed). \\
+\textbf{Analysis:} The Type Checker correctly rejected all mutants because the inserted boolean operators (AND, OR) require boolean operands, but received integers. \\
+\textbf{Conclusion:} The system strictly enforces operand type compatibility for logical operations.
+
+\subsection{Literal Constant Replacement}
+
+\textbf{Result:} 61.54\% Score (8/13 Killed, 5 Survived). \\
+\textbf{Analysis:}
+\begin{itemize}[nosep]
+    \item \textbf{Killed (Type Replacements):} Mutants that substituted incompatible types (e.g., \texttt{int} $\to$ \texttt{boolean}) were correctly flagged as errors.
+    \item \textbf{Survived (Value Replacements):} Mutants that changed values (e.g., \texttt{10} $\to$ \texttt{0}) survived. Since \texttt{0} is a valid \texttt{int}, the program remains well-typed despite the semantic change.
+\end{itemize}
+\textbf{Conclusion:} The results confirm the Type Checker validates structural type consistency while correctly ignoring semantic (value) correctness.
+
+\subsection{Return Type Replacement}
+
+\textbf{Result:} 50.00\% Score (1/2 Killed, 1 Survived). \\
+\textbf{Analysis:}
+\begin{itemize}[nosep]
+    \item The \textbf{Killed} mutant (\texttt{return true;}) violated the function's \texttt{int} signature.
+    \item The \textbf{Survived} mutant (\texttt{return 0;}) adhered to the \texttt{int} signature, making it type-safe despite the logical error.
+\end{itemize}
+\textbf{Conclusion:} The Type Checker successfully validates return statements against the function signature.
+
+\section{Conclusion}
+
+This project successfully implemented a Mutation Testing Framework designed to rigorously validate the Type Checker of the SIMPLE programming language. By employing a "Generate and Test" architecture, the system leverages AST manipulation and deep copying to create isolated test cases that stress-test the Type Checker's logic.
+
+The implementation of modular mutation operators Arithmetic Operator Replacement (AOR), Literal Constant Replacement (LCR), and Return Type Replacement (RTR) allowed for a multifaceted evaluation of the system. The test results offer a clear distinction between the responsibilities of a type checker versus those of a functional test suite:
+
+\begin{itemize}
+    \item \textbf{ Robustness against Type Errors:} The perfect mutation score achieved with AOR demonstrates that the Type Checker is highly effective at identifying and rejecting fundamental type mismatches, such as using boolean operators on integer operands.
+    \item \textbf{ Precision of Scope:} The surviving mutants in the LCR and RTR tests highlight the intended boundaries of static analysis. The Type Checker correctly accepts programs that are syntactically and typographically valid, even when their runtime semantics (values) are logically incorrect.
+\end{itemize}
+
+Ultimately, this project confirms that Mutation Testing is an effective methodology not only for testing software applications but also for verifying the correctness and precision of static analysis tools.
+
+\section{LLM Usage Declaration}
+
+LLMs were utilized to assist in the development of this project and the preparation of this report:
+\begin{itemize}
+    \item \textbf{Code Assistance:} Debug and troubleshoot the implementation of the Mutation Testing framework.
+    \item \textbf{Report Generation:} Articulate the system architecture and generate verbose descriptions for the results analysis.
+\end{itemize}
+All code and text generated were reviewed and verified by the authors to ensure accuracy.
+
+\end{document}
